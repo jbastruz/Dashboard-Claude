@@ -80,6 +80,7 @@ export class SubagentWatcher {
         endedAt: (data.ended_at as string) ?? (data.endedAt as string) ?? null,
         toolsUsed: (data.tools_used as string[]) ?? (data.toolsUsed as string[]) ?? [],
         lastActivity: (data.last_activity as string) ?? (data.lastActivity as string) ?? new Date().toISOString(),
+        lastAction: null,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

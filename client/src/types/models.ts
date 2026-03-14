@@ -16,6 +16,14 @@ export type AgentType =
 
 export type AgentStatus = "active" | "idle" | "completed";
 
+export type AgentActionType = "tool" | "idle" | "started" | "completed";
+
+export interface AgentAction {
+  type: AgentActionType;
+  detail: string;
+  timestamp: string;
+}
+
 export interface Agent {
   agentId: string;
   sessionId: string;
@@ -29,6 +37,7 @@ export interface Agent {
   endedAt: string | null;
   toolsUsed: string[];
   lastActivity: string;
+  lastAction?: AgentAction;
 }
 
 export type TaskStatus = "pending" | "in_progress" | "completed";
@@ -69,6 +78,21 @@ export interface Interaction {
   label: string;
   timestamp: string;
   data?: Record<string, unknown>;
+}
+
+export interface TmuxPane {
+  paneId: string;
+  sessionName: string;
+  windowIndex: number;
+  paneIndex: number;
+  title: string;
+  content: string;
+  active: boolean;
+}
+
+export interface TmuxSession {
+  sessionName: string;
+  panes: TmuxPane[];
 }
 
 export interface FullState {

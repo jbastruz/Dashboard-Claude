@@ -121,3 +121,33 @@ Chaque décision est datée et justifiée. Format : contexte → décision → c
 **Décision** : Corriger le hookInstaller pour wrapper chaque hook dans un objet `{ matcher: "", hooks: [...] }`. Le `matcher: ""` signifie "match all" (tous les outils).
 
 **Conséquences** : Les hooks sont maintenant compatibles avec Claude Code v2.1+. Le format précédent cassait le lancement de Claude dans le terminal.
+
+---
+
+## 2026-03-14 : lastAction comme objet structuré { type, detail, timestamp }
+
+**Contexte** : Le dashboard affichait le statut d'un agent (active/idle/completed) mais pas ce qu'il était en train de faire concrètement. Les utilisateurs voulaient voir la dernière action en un coup d'œil sur les cartes agents.
+
+**Décision** : Ajouter un champ `lastAction: AgentLastAction | null` sur l'interface `Agent`, structuré comme `{ type: string, detail: string, timestamp: string }`. Le type est un enum sémantique ("started", "completed", "idle", "tool"), le detail donne le contexte (ex: nom de l'outil), et le timestamp permet l'affichage relatif.
+
+**Conséquences** : L'information est plus riche qu'un simple string — le type permet le mapping vers une icône et un label traduit, le timestamp permet "il y a X min". Le champ est nullable pour la compatibilité avec les agents détectés par file scanning (qui n'ont pas de hooks).
+
+---
+
+## 2026-03-14 : Monitoring tmux via polling capture-pane
+
+**Contexte** : Les agents Claude Code en mode teammate sont souvent exécutés dans des sessions tmux. L'utilisateur voulait voir le contenu des terminaux directement dans le dashboard sans basculer de fenêtre.
+
+**Décision** : Créer un service `TmuxMonitor` qui poll toutes les 2 secondes via `tmux list-sessions`, `tmux list-panes` et `tmux capture-pane -p`. Le contenu est caché en mémoire et seuls les changements sont émis via WebSocket.
+
+**Conséquences** : Approche simple et fiable qui ne nécessite aucune configuration tmux spéciale. Le polling à 2s est un bon compromis entre réactivité et charge CPU. La dégradation gracieuse (tmux absent = service désactivé) évite les erreurs sur les systèmes sans tmux.
+
+---
+
+## 2026-03-14 : Détection tmux — vérification binaire + list-sessions
+
+**Contexte** : Le service TmuxMonitor doit fonctionner sur des machines avec ou sans tmux installé, et avec ou sans sessions actives.
+
+**Décision** : Vérification en deux étapes au démarrage : 1) `which tmux` pour vérifier la présence du binaire, 2) `tmux list-sessions` pour vérifier le serveur. Si `list-sessions` échoue avec "no server running" ou "no sessions", tmux est considéré comme disponible (il se lancera quand des sessions existeront).
+
+**Conséquences** : Le monitor démarre correctement dans tous les cas : tmux absent, tmux installé mais pas de serveur, tmux avec des sessions actives. Pas de faux négatifs.

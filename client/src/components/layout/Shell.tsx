@@ -8,9 +8,10 @@ import InteractionGraph from "../graph/InteractionGraph";
 import AgentGrid from "../agents/AgentGrid";
 import TaskBoard from "../tasks/TaskBoard";
 import Timeline from "../timeline/Timeline";
+import MonitoringView from "../monitoring/MonitoringView";
 import ErrorBoundary from "../ErrorBoundary";
 
-export type ViewId = "graph" | "agents" | "tasks" | "timeline";
+export type ViewId = "graph" | "agents" | "tasks" | "timeline" | "monitoring";
 
 interface ShellProps {
   session: Session;
@@ -37,6 +38,7 @@ export default function Shell({ session }: ShellProps) {
             {activeView === "agents" && <AgentGrid sessionId={session?.sessionId} />}
             {activeView === "tasks" && <TaskBoard sessionId={session?.sessionId} />}
             {activeView === "timeline" && <Timeline />}
+            {activeView === "monitoring" && <MonitoringView />}
           </ErrorBoundary>
         </main>
       </div>

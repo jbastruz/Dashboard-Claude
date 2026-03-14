@@ -7,6 +7,7 @@ import type {
   Team,
 } from "../store/Store.js";
 import type { ConversationEntry } from "../services/ConversationStore.js";
+import type { TmuxSession, TmuxPane } from "../services/TmuxMonitor.js";
 
 export type WsEvent =
   | { type: "snapshot"; data: FullState }
@@ -21,5 +22,7 @@ export type WsEvent =
   | { type: "tool:use"; data: { agentId: string; toolName: string; timestamp: string } }
   | { type: "conversation:update"; data: { targetId: string; entries: ConversationEntry[] } }
   | { type: "session:output"; data: { sessionId: string; chunk: unknown } }
+  | { type: "tmux:sessions"; data: { available: boolean; sessions: TmuxSession[] } }
+  | { type: "tmux:update"; data: TmuxPane }
   | { type: "command:ack"; data: { requestId: string; sessionId?: string } }
   | { type: "command:error"; data: { requestId: string; error: string } };

@@ -3,6 +3,7 @@ import express from "express";
 import type { Store } from "./store/Store.js";
 import type { SessionManager } from "./services/SessionManager.js";
 import type { ConversationStore } from "./services/ConversationStore.js";
+import type { TmuxMonitor } from "./services/TmuxMonitor.js";
 import { createHookReceiver } from "./hooks/hookReceiver.js";
 import { createApiRouter } from "./routes/api.js";
 import { config } from "./config.js";
@@ -15,6 +16,7 @@ export function createServer(
   store: Store,
   sessionManager: SessionManager,
   conversationStore: ConversationStore,
+  tmuxMonitor?: TmuxMonitor,
 ): {
   app: express.Express;
   server: http.Server;
@@ -41,7 +43,7 @@ export function createServer(
   // ── Routes ─────────────────────────────────
 
   app.use("/hooks", createHookReceiver(store));
-  app.use("/api", createApiRouter(store, sessionManager, conversationStore));
+  app.use("/api", createApiRouter(store, sessionManager, conversationStore, tmuxMonitor));
 
   // Health check
   app.get("/health", (_req, res) => {

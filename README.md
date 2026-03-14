@@ -6,12 +6,13 @@ Dashboard interactif temps réel pour monitorer les sous-agents et teams du team
 
 - **Détection automatique** des sessions Claude en cours via `~/.claude/`
 - **Graphe d'interactions** : visualisation des agents et de leurs communications (React Flow + dagre)
-- **Grille d'agents** : vue carte avec type, status, outils utilisés
+- **Grille d'agents** : vue carte avec type, status, dernière action en temps réel, outils utilisés
 - **Kanban de tâches** : 3 colonnes (En attente, En cours, Terminé)
 - **Timeline** : feed chronologique des événements (spawn, messages, tools)
 - **Panel détail** : slide-in avec informations complètes d'un agent
 - **Temps réel** : WebSocket avec reconnexion automatique
 - **Hooks Claude Code** : auto-installés dans `~/.claude/settings.json`
+- **Monitoring tmux** : visualisation en temps réel du contenu des terminaux tmux des agents
 - **Écran d'attente** : affiché quand aucune session n'est active
 
 ## Prérequis
@@ -60,7 +61,7 @@ DASHBOARD_PORT=4000 npm run dev
 | Condition | Écran |
 |-----------|-------|
 | Aucune session Claude | Écran d'attente avec indicateur WS |
-| Session active | Dashboard principal avec 4 vues |
+| Session active | Dashboard principal avec 5 vues |
 
 ### Vues du dashboard
 
@@ -68,6 +69,15 @@ DASHBOARD_PORT=4000 npm run dev
 - **Agents** : Grille responsive de cartes. Clic → panel détail.
 - **Tâches** : Kanban 3 colonnes avec assignation et blocages.
 - **Chronologie** : Feed vertical trié par timestamp.
+- **Monitoring** : Grille de terminaux tmux en lecture seule, mise à jour toutes les 2s.
+
+### Monitoring tmux
+
+L'onglet Monitoring affiche en temps réel le contenu des sessions tmux détectées sur la machine. Utile pour observer les terminaux des agents Claude Code exécutés dans tmux sans quitter le dashboard.
+
+**Prérequis** : tmux doit être installé sur la machine. Si tmux n'est pas disponible, l'onglet affiche un message explicatif.
+
+**Fonctionnement** : Le serveur poll `tmux capture-pane` toutes les 2 secondes et envoie les mises à jour via WebSocket. Seuls les changements de contenu sont transmis au client.
 
 ## Build production
 

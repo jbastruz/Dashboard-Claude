@@ -8,6 +8,7 @@ import { useInteractionStore } from "../stores/interactionStore";
 import { useWsStore } from "../stores/wsStore";
 import { useChatStore } from "../stores/chatStore";
 import { useTeamStore } from "../stores/teamStore";
+import { useTmuxStore } from "../stores/tmuxStore";
 import type { WsEvent } from "../types/ws-events";
 import { toClientMessages } from "../lib/mappers";
 
@@ -25,6 +26,7 @@ export function useWebSocket(): void {
     const wsStore = useWsStore.getState();
     const chatStore = useChatStore.getState();
     const teamStore = useTeamStore.getState();
+    const tmuxStore = useTmuxStore.getState();
 
     // Store client reference for bidirectional communication
     wsStore.setWsClient(client);
@@ -58,7 +60,14 @@ export function useWebSocket(): void {
         }
 
         case "agent:start":
-          agentStore.setAgent(event.data);
+          agentStore.setAgent({
+            ...event.data,
+            lastAction: event.data.lastAction ?? {
+              type: "started",
+              detail: event.data.name,
+              timestamp: event.data.startedAt,
+            },
+          });
           break;
 
         case "agent:update":
@@ -70,6 +79,11 @@ export function useWebSocket(): void {
             agentId: event.data.agentId,
             status: "completed",
             endedAt: new Date().toISOString(),
+            lastAction: {
+              type: "completed",
+              detail: "",
+              timestamp: new Date().toISOString(),
+            },
           });
           break;
 
@@ -93,6 +107,11 @@ export function useWebSocket(): void {
               agentId: event.data.agentId,
               toolsUsed: tools,
               lastActivity: event.data.timestamp,
+              lastAction: {
+                type: "tool",
+                detail: event.data.toolName,
+                timestamp: event.data.timestamp,
+              },
             });
           }
           break;
@@ -114,6 +133,14 @@ export function useWebSocket(): void {
           console.debug("[ws] session:output", event.data.sessionId, event.data.chunk);
           break;
         }
+
+        case "tmux:sessions":
+          tmuxStore.setSessions(event.data.available, event.data.sessions);
+          break;
+
+        case "tmux:update":
+          tmuxStore.updatePane(event.data);
+          break;
 
         case "command:ack":
           console.log("[ws] command:ack", event.data.requestId);

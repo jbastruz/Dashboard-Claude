@@ -24,6 +24,7 @@ export const fr = {
     agents: "Agents",
     tasks: "Tâches",
     timeline: "Chronologie",
+    monitoring: "Monitoring",
   },
   agent: {
     active: "Actif",
@@ -36,6 +37,12 @@ export const fr = {
     startedAt: "Démarré à",
     parent: "Agent parent",
     team: "Équipe",
+    action: {
+      tool: "Outil",
+      idle: "En pause",
+      started: "Démarré",
+      completed: "Terminé",
+    } as Record<string, string>,
     activeAgents: "Agents actifs",
     waitingFor: "En attente",
     tasksInProgress: "tâches en cours",
@@ -86,6 +93,15 @@ export const fr = {
     info: "Infos",
     chat: "Chat",
     history: "Historique",
+  },
+  monitoring: {
+    title: "Monitoring tmux",
+    unavailable: "Cette option n'est pas disponible",
+    unavailableHint: "Claude Code teammate n'est pas en mode tmux",
+    session: "Session",
+    pane: "Panneau",
+    noSessions: "Aucune session tmux détectée",
+    refreshing: "Actualisation...",
   },
   ws: {
     connected: "Connecté",

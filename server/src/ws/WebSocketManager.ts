@@ -4,6 +4,7 @@ import type { Duplex } from "node:stream";
 import type { Store } from "../store/Store.js";
 import type { SessionManager } from "../services/SessionManager.js";
 import type { ConversationStore } from "../services/ConversationStore.js";
+import type { TmuxMonitor } from "../services/TmuxMonitor.js";
 import type { WsEvent } from "./events.js";
 import type { WsClientEvent } from "./clientEvents.js";
 
@@ -12,11 +13,13 @@ export class WebSocketManager {
   private store: Store;
   private sessionManager: SessionManager;
   private conversationStore: ConversationStore;
+  private tmuxMonitor: TmuxMonitor | null;
 
-  constructor(store: Store, sessionManager: SessionManager, conversationStore: ConversationStore) {
+  constructor(store: Store, sessionManager: SessionManager, conversationStore: ConversationStore, tmuxMonitor?: TmuxMonitor) {
     this.store = store;
     this.sessionManager = sessionManager;
     this.conversationStore = conversationStore;
+    this.tmuxMonitor = tmuxMonitor ?? null;
     this.wss = new WebSocketServer({ noServer: true });
 
     this.wss.on("connection", (ws: WebSocket) => {
@@ -46,6 +49,7 @@ export class WebSocketManager {
     this.bindStoreEvents();
     this.bindSessionManagerEvents();
     this.bindConversationStoreEvents();
+    this.bindTmuxMonitorEvents();
   }
 
   /**
@@ -219,6 +223,21 @@ export class WebSocketManager {
   private bindConversationStoreEvents(): void {
     this.conversationStore.on("conversation:update", (data: { targetId: string; entries: import("../services/ConversationStore.js").ConversationEntry[] }) => {
       this.broadcast({ type: "conversation:update", data });
+    });
+  }
+
+  /**
+   * Wire up TmuxMonitor events to WS broadcasts.
+   */
+  private bindTmuxMonitorEvents(): void {
+    if (!this.tmuxMonitor) return;
+
+    this.tmuxMonitor.on("tmux:sessions", (sessions) => {
+      this.broadcast({ type: "tmux:sessions", data: { available: true, sessions } });
+    });
+
+    this.tmuxMonitor.on("tmux:update", (pane) => {
+      this.broadcast({ type: "tmux:update", data: pane });
     });
   }
 

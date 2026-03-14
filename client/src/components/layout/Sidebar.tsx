@@ -1,4 +1,4 @@
-import { Network, Users, ListTodo, Clock } from "lucide-react";
+import { Network, Users, ListTodo, Clock, Monitor } from "lucide-react";
 import { fr } from "../../lib/fr";
 import type { ViewId } from "./Shell";
 import { useAgentStore, useRelevantAgents } from "../../stores/agentStore";
@@ -14,6 +14,7 @@ const NAV_ITEMS: { id: ViewId; label: string; Icon: typeof Network }[] = [
   { id: "agents", label: fr.sidebar.agents, Icon: Users },
   { id: "tasks", label: fr.sidebar.tasks, Icon: ListTodo },
   { id: "timeline", label: fr.sidebar.timeline, Icon: Clock },
+  { id: "monitoring", label: fr.sidebar.monitoring, Icon: Monitor },
 ];
 
 export default function Sidebar({ activeView, onViewChange }: SidebarProps) {

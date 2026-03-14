@@ -106,6 +106,7 @@ export function createHookReceiver(store: Store): Router {
             endedAt: null,
             toolsUsed: [],
             lastActivity: now,
+            lastAction: { type: "started", detail: payload.agent_name ?? agentType, timestamp: now },
           });
 
           // Record spawn interaction
@@ -131,6 +132,7 @@ export function createHookReceiver(store: Store): Router {
                 status: "completed",
                 endedAt: now,
                 lastActivity: now,
+                lastAction: { type: "completed", detail: existing.name, timestamp: now },
               });
             } else {
               store.removeAgent(payload.agent_id);
@@ -148,6 +150,7 @@ export function createHookReceiver(store: Store): Router {
               agentId: payload.agent_id,
               status: "idle",
               lastActivity: now,
+              lastAction: { type: "idle", detail: "waiting", timestamp: now },
             });
           }
           break;
@@ -186,13 +189,17 @@ export function createHookReceiver(store: Store): Router {
               timestamp: now,
             });
 
-            // Add tool to agent's toolsUsed list
+            // Add tool to agent's toolsUsed list and update lastAction
             const agent = store.getAgent(payload.agent_id);
-            if (agent && !agent.toolsUsed.includes(payload.tool_name)) {
-              store.updateAgentPartial({
+            if (agent) {
+              const partial: Parameters<typeof store.updateAgentPartial>[0] = {
                 agentId: payload.agent_id,
-                toolsUsed: [...agent.toolsUsed, payload.tool_name],
-              });
+                lastAction: { type: "tool", detail: payload.tool_name, timestamp: now },
+              };
+              if (!agent.toolsUsed.includes(payload.tool_name)) {
+                partial.toolsUsed = [...agent.toolsUsed, payload.tool_name];
+              }
+              store.updateAgentPartial(partial);
             }
 
             // Record tool_use interaction
@@ -214,6 +221,7 @@ export function createHookReceiver(store: Store): Router {
             store.updateAgentPartial({
               agentId: payload.agent_id,
               lastActivity: now,
+              lastAction: { type: "tool", detail: payload.tool_name ?? "unknown", timestamp: now },
             });
           }
           break;
@@ -231,6 +239,7 @@ export function createHookReceiver(store: Store): Router {
                   status: "completed",
                   endedAt: now,
                   lastActivity: now,
+                  lastAction: { type: "completed", detail: "session stopped", timestamp: now },
                 });
               }
             }

@@ -1,4 +1,4 @@
-import type { Agent, FullState, Interaction, Session, Task, Team } from "./models";
+import type { Agent, FullState, Interaction, Session, Task, Team, TmuxPane, TmuxSession } from "./models";
 
 export interface ConversationEntry {
   id: string;
@@ -27,4 +27,6 @@ export type WsEvent =
   | { type: "conversation:update"; data: { targetId: string; entries: ConversationEntry[] } }
   | { type: "session:output"; data: { sessionId: string; chunk: unknown } }
   | { type: "command:ack"; data: { requestId: string; sessionId?: string } }
-  | { type: "command:error"; data: { requestId: string; error: string } };
+  | { type: "command:error"; data: { requestId: string; error: string } }
+  | { type: "tmux:sessions"; data: { available: boolean; sessions: TmuxSession[] } }
+  | { type: "tmux:update"; data: TmuxPane };

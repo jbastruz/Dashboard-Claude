@@ -116,6 +116,7 @@ export class TeamWatcher {
           endedAt: null,
           toolsUsed: [],
           lastActivity: now,
+          lastAction: null,
         });
 
         // Collect unique cwds to scan for JSONL files

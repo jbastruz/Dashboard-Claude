@@ -62,3 +62,22 @@ Choix de stack, librairies et patterns avec les alternatives considérées.
 | custom | Gris | gray-500 |
 
 Status : actif = vert pulse, idle = ambre, terminé = gris.
+
+---
+
+## Monitoring tmux
+
+### Polling tmux vs alternatives
+
+- **Choix** : Polling `tmux capture-pane` toutes les 2 secondes
+- **Alternatives considérées** :
+  - **tmux control mode** (`tmux -C`) : streaming natif des changements, mais complexe à parser et nécessite une connexion persistante par session
+  - **inotify sur le socket tmux** : détecte l'activité mais ne donne pas le contenu des panes
+  - **ptrace / pty proxy** : trop invasif, risques de sécurité
+- **Raison** : Le polling est simple, fiable, et ne nécessite aucune configuration tmux spéciale. Le cache de contenu évite les broadcasts inutiles. La charge CPU est négligeable à 2s d'intervalle.
+
+### UI terminal custom vs xterm.js
+
+- **Choix** : Rendu custom avec `<pre>` stylisé (fond `#0a0a0f`, texte `green-400`)
+- **Alternative** : xterm.js (émulateur de terminal complet dans le navigateur)
+- **Raison** : xterm.js (~200KB gzip) est surdimensionné pour du contenu en lecture seule. Un `<pre>` avec scroll automatique suffit pour afficher la sortie capturée. Pas besoin de gestion des séquences d'échappement ANSI complexes, le contenu de `capture-pane` est du texte brut.

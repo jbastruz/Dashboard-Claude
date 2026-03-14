@@ -6,6 +6,7 @@ import { WatcherManager } from "./watchers/WatcherManager.js";
 import { PidChecker } from "./services/PidChecker.js";
 import { SessionManager } from "./services/SessionManager.js";
 import { ConversationStore, type ConversationEntry } from "./services/ConversationStore.js";
+import { TmuxMonitor } from "./services/TmuxMonitor.js";
 import { installHooks, uninstallHooks } from "./hooks/hookInstaller.js";
 
 async function main(): Promise<void> {
@@ -14,8 +15,9 @@ async function main(): Promise<void> {
   const store = new Store();
   const sessionManager = new SessionManager();
   const conversationStore = new ConversationStore();
-  const { server } = createServer(store, sessionManager, conversationStore);
-  const wsManager = new WebSocketManager(store, sessionManager, conversationStore);
+  const tmuxMonitor = new TmuxMonitor();
+  const { server } = createServer(store, sessionManager, conversationStore, tmuxMonitor);
+  const wsManager = new WebSocketManager(store, sessionManager, conversationStore, tmuxMonitor);
   const watcherManager = new WatcherManager(store, conversationStore);
   const pidChecker = new PidChecker(store);
 
@@ -68,10 +70,11 @@ async function main(): Promise<void> {
     console.log(`[dashboard] warning: could not install hooks: ${msg}`);
   }
 
-  // ── Start watchers + PID checker ────────────
+  // ── Start watchers + PID checker + tmux ─────
 
   await watcherManager.start();
   pidChecker.start();
+  await tmuxMonitor.start();
 
   // ── Start listening ─────────────────────────
 
@@ -86,6 +89,7 @@ async function main(): Promise<void> {
     console.log(`[dashboard] received ${signal}, shutting down...`);
 
     pidChecker.stop();
+    tmuxMonitor.stop();
     store.stopGc();
 
     await sessionManager.stopAll();

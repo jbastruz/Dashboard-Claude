@@ -35,6 +35,12 @@ export interface Session {
   status: "active" | "ended";
 }
 
+export interface AgentLastAction {
+  type: string;
+  detail: string;
+  timestamp: string;
+}
+
 export interface Agent {
   agentId: string;
   sessionId: string;
@@ -48,6 +54,7 @@ export interface Agent {
   endedAt: string | null;
   toolsUsed: string[];
   lastActivity: string;
+  lastAction: AgentLastAction | null;
 }
 
 export interface Task {

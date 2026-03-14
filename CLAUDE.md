@@ -8,7 +8,7 @@ Dashboard interactif temps réel pour monitorer les sous-agents et teams du team
 
 ## Project Status
 
-MVP fonctionnel. Le serveur détecte les sessions, agents (avec types), tâches et équipes. Le client React affiche un dashboard avec graphe d'interactions, grille d'agents, kanban de tâches et timeline.
+MVP fonctionnel. Le serveur détecte les sessions, agents (avec types et dernière action), tâches et équipes. Monitoring tmux intégré. Le client React affiche un dashboard avec graphe d'interactions, grille d'agents, kanban de tâches, timeline et monitoring tmux.
 
 ## Commands
 
@@ -33,6 +33,9 @@ Voir [ARCHITECTURE.md](ARCHITECTURE.md) pour le détail complet.
 - **Chokidar v4** : Ne supporte PAS les glob patterns dans `watch()`, utiliser des chemins de répertoires et filtrer manuellement
 - **Types agents** : Le champ dans les fichiers meta.json est `agentType` (pas `type` ni `agent_type`)
 - **Session startedAt** : Peut être un nombre (epoch ms) ou une string ISO — toujours gérer les deux
+- **Agent lastAction** : Objet `{ type, detail, timestamp }` ou null — peuplé par les hooks, pas par le file scanning
+- **TmuxMonitor** : Polling 2s, dégradation gracieuse si tmux absent. Timer `.unref()` obligatoire
+- **Stores Zustand** : Un store par domaine — `tmuxStore` ajouté pour l'état tmux
 
 ## Documentation
 

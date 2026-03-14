@@ -27,10 +27,11 @@ Dashboard-Claude/
 │       │   ├── JsonlParser.ts          # Lecture incrémentale JSONL (offset bytes)
 │       │   └── InteractionExtractor.ts # Extrait spawn/SendMessage des JSONL
 │       ├── store/
-│       │   └── Store.ts           # State en mémoire (Maps + EventEmitter)
+│       │   └── Store.ts           # State en mémoire (Maps + EventEmitter) — inclut AgentLastAction
 │       ├── services/
 │       │   ├── PidChecker.ts      # Vérifie les PID alive toutes les 5s
-│       │   └── TmuxDetector.ts    # Détection tmux (graceful degrade)
+│       │   ├── TmuxDetector.ts    # Détection tmux (graceful degrade)
+│       │   └── TmuxMonitor.ts     # Monitoring tmux : polling sessions/panes + capture contenu
 │       ├── routes/
 │       │   └── api.ts             # GET /api/state, /sessions, /agents/:id
 │       └── ws/
@@ -45,8 +46,8 @@ Dashboard-Claude/
         ├── main.tsx
         ├── App.tsx               # Conditionnel : NoSessionScreen | Shell
         ├── types/
-        │   ├── models.ts         # Session, Agent, Task, Team, Interaction
-        │   └── ws-events.ts      # WsEvent discriminated union
+        │   ├── models.ts         # Session, Agent, Task, Team, Interaction, TmuxSession, TmuxPane
+        │   └── ws-events.ts      # WsEvent discriminated union (+ tmux:sessions, tmux:update)
         ├── api/
         │   ├── rest.ts           # Fetch /api/state initial
         │   └── ws.ts             # Client WS + reconnexion exponentielle
@@ -55,7 +56,8 @@ Dashboard-Claude/
         │   ├── agentStore.ts
         │   ├── taskStore.ts
         │   ├── interactionStore.ts
-        │   └── wsStore.ts
+        │   ├── wsStore.ts
+        │   └── tmuxStore.ts         # État tmux (sessions, panes, disponibilité)
         ├── hooks/
         │   ├── useWebSocket.ts   # Connect + dispatch events vers stores
         │   ├── useAgentGraph.ts  # Dérive React Flow nodes/edges
@@ -63,7 +65,7 @@ Dashboard-Claude/
         ├── components/
         │   ├── layout/
         │   │   ├── Shell.tsx     # Grid : sidebar + content + detail panel
-        │   │   ├── Sidebar.tsx   # 4 onglets verticaux
+        │   │   ├── Sidebar.tsx   # 5 onglets verticaux (+ Monitoring)
         │   │   └── Header.tsx    # Info session + indicateur WS
         │   ├── screens/
         │   │   └── NoSessionScreen.tsx
@@ -81,9 +83,11 @@ Dashboard-Claude/
         │   │   ├── TaskBoard.tsx
         │   │   ├── TaskColumn.tsx
         │   │   └── TaskCard.tsx
-        │   └── timeline/
-        │       ├── Timeline.tsx
-        │       └── TimelineEvent.tsx
+        │   ├── timeline/
+        │   │   ├── Timeline.tsx
+        │   │   └── TimelineEvent.tsx
+        │   └── monitoring/
+        │       └── MonitoringView.tsx  # Onglet Monitoring : grille terminaux tmux
         ├── lib/
         │   ├── fr.ts             # Strings FR centralisées
         │   ├── constants.ts      # Couleurs, URLs, config WS
@@ -175,6 +179,70 @@ POST /api/sessions/:id/message  → envoyer un message à une session
 DELETE /api/sessions/:id        → arrêter une session
 GET /api/agents/:id/conversation → historique de conversation d'un agent
 ```
+
+## Dernière action des agents (lastAction)
+
+Chaque agent expose un champ `lastAction: AgentLastAction | null` qui décrit sa dernière activité significative.
+
+### Structure
+
+```typescript
+interface AgentLastAction {
+  type: string;       // "started" | "completed" | "idle" | "tool"
+  detail: string;     // ex: nom de l'outil utilisé, raison de l'arrêt
+  timestamp: string;  // ISO 8601
+}
+```
+
+### Alimentation
+
+Le `hookReceiver.ts` peuple `lastAction` à chaque événement lifecycle reçu via les hooks Claude Code :
+- **SubagentStart** → `{ type: "started", detail: agentType }`
+- **SubagentCompleted/Stop** → `{ type: "completed", detail: "" }`
+- **SubagentIdle** → `{ type: "idle", detail: "" }`
+- **ToolUse** → `{ type: "tool", detail: toolName }`
+
+### Affichage frontend
+
+Le composant `AgentCard.tsx` affiche la dernière action avec une icône colorée (claude-orange), un label traduit en FR, le détail tronqué et le temps relatif (`timeAgo`). Le type `AgentActionType` côté client est défini dans `models.ts`.
+
+## Monitoring tmux
+
+### TmuxMonitor (`server/src/services/TmuxMonitor.ts`)
+
+Service de monitoring des sessions tmux, utile pour observer les terminaux des agents Claude Code exécutés dans tmux.
+
+**Fonctionnement :**
+1. Vérifie la disponibilité de tmux au démarrage (`which tmux` + `tmux list-sessions`)
+2. Polling toutes les 2 secondes via `setInterval` (timer `.unref()` pour ne pas bloquer le shutdown)
+3. Liste les sessions et panes via `tmux list-sessions` et `tmux list-panes`
+4. Capture le contenu des panes via `tmux capture-pane -p` (200 dernières lignes)
+5. Détecte les changements de contenu via un cache en mémoire (`paneContentCache`)
+6. Émet des événements typés : `tmux:sessions` (liste changée) et `tmux:update` (contenu pane changé)
+
+**Dégradation gracieuse :** Si tmux n'est pas installé ou indisponible, le service se désactive silencieusement. L'UI affiche un état "indisponible".
+
+### Routes REST tmux
+
+```
+GET /api/tmux/available      → { available: boolean, reason?: string }
+GET /api/tmux/sessions       → TmuxSession[]
+GET /api/tmux/pane/:s/:w/:p  → contenu texte d'un pane spécifique
+```
+
+### Événements WebSocket tmux
+
+- `tmux:sessions` → `{ available: boolean, sessions: TmuxSession[] }` — liste des sessions mise à jour
+- `tmux:update` → `TmuxPane` — contenu d'un pane mis à jour
+
+### Frontend : onglet Monitoring
+
+Le 5e onglet de la sidebar ("Monitoring", icône `Monitor` de lucide-react) affiche :
+- **État indisponible** : message explicatif si tmux n'est pas détecté
+- **État vide** : message si aucune session tmux n'est active
+- **Grille de terminaux** : chaque pane tmux est rendu dans un bloc stylisé terminal (fond `#0a0a0f`, texte `green-400`) avec scroll automatique vers le bas. Grille responsive 1 col / 2 cols en `lg`.
+
+Le state est géré par `tmuxStore.ts` (Zustand) avec deux actions : `setSessions` et `updatePane`. Les événements WS sont dispatchés dans `useWebSocket.ts`.
 
 ## Ports
 
